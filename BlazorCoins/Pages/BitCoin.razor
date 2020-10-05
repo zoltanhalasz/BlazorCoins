@@ -1,0 +1,187 @@
+﻿@page "/bitcoin/{coin}"
+@page "/bitcoin"
+@using CoinpaprikaAPI
+@using Json.Net
+@using Newtonsoft.Json
+@using CoinpaprikaAPI.Entity
+@inject NavigationManager NavigationManager
+
+<h1>@coin</h1>
+<div class="row">    
+    <div class="col-md-4">
+        <h4>Select Days</h4>
+        <RadzenDropDown AllowClear="true" TValue="string"
+                        Data="@days"
+                        TextProperty="Days" ValueProperty="Days" Style="margin-bottom: 20px" Change="@(day => ShowCoinHistory(coin, day))" />
+    </div>
+    <div class="col-md-4">
+        <h4>Select Chart</h4>
+        <RadzenRadioButtonList @bind-Value="radiovalue" TValue="int" Change="@((args) => ChangeRadio(args))">
+            <Items>
+                <RadzenRadioButtonListItem Text="Price" Value="1" />
+                <RadzenRadioButtonListItem Text="MktCap" Value="2" />
+            </Items>
+        </RadzenRadioButtonList>
+    </div>
+
+
+</div>
+
+@if (coinDetailsList != null)
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>TimeOpen </th>
+                <th>TimeClose </th>
+                <th>Open </th>
+                <th>High </th>
+                <th>Low </th>
+                <th>Close  </th>
+                <th>Volume  </th>
+                <th>MarketCap  </th>
+
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>@coinDetailsList[0].TimeOpen </td>
+                <td>@coinDetailsList[0].TimeClose </td>
+                <td>@Math.Round(coinDetailsList[0].Open, 2)</td>
+                <td>@Math.Round(coinDetailsList[0].High, 2)</td>
+                <td>@Math.Round(coinDetailsList[0].Low, 2)</td>
+                <td>@Math.Round(coinDetailsList[0].Close, 2)</td>
+                <td>@coinDetailsList[0].Volume </td>
+                <td>@coinDetailsList[0].MarketCap </td>
+            </tr>
+
+        </tbody>
+    </table>
+
+
+}
+
+@if (historicalList != null)
+{
+    if (firstchartvisible)
+    {
+        <div class="row">
+            <div class="col-md-12">
+                <RadzenChart>
+                    <RadzenLineSeries Smooth="true" Data="@HistoricalPriceArray" CategoryProperty="Date" Title="Price" LineType="LineType.Solid" ValueProperty="Quote">
+                        <RadzenMarkers MarkerType="MarkerType.Square" />
+                    </RadzenLineSeries>
+                    <RadzenCategoryAxis Padding="20" FormatString="{0:dd-MM-yyyy}" />
+                    <RadzenValueAxis>
+                        <RadzenGridLines Visible="true" />
+                        <RadzenAxisTitle Text="Price in USD" />
+                    </RadzenValueAxis>
+                </RadzenChart>
+            </div>
+        </div>
+    }
+    if (secondchartvisible)
+    {
+        <div class="row">
+            <div class="col-md-12">
+                <RadzenChart>
+                    <RadzenLineSeries Smooth="true" Data="@HistoricalCapitalizationArray" CategoryProperty="Date" Title="Capitalization" LineType="LineType.Dotted" ValueProperty="Quote">
+                        <RadzenMarkers MarkerType="MarkerType.Square" />
+                    </RadzenLineSeries>
+                    <RadzenCategoryAxis Padding="20" FormatString="{0:dd-MM-yyyy}" />
+                    <RadzenValueAxis>
+                        <RadzenGridLines Visible="true" />
+                        <RadzenAxisTitle Text="MktCap in USD" />
+                    </RadzenValueAxis>
+                </RadzenChart>
+            </div>
+        </div>
+    }
+
+}
+
+@code {
+
+    [Parameter]
+    public string coin { get; set; }
+
+    private string[] days = new string[] { "10", "30", "60", "90", "120" };
+
+    private int radiovalue = 1;
+    private bool firstchartvisible = true, secondchartvisible = false;
+
+    private List<CoinpaprikaAPI.Entity.OhlcValue> coinDetailsList;
+    private List<CoinpaprikaAPI.Entity.OhlcValue> historicalList;
+    private List<DataItem> HistoricalPriceArray = new List<DataItem>();
+    private List<DataItem> HistoricalCapitalizationArray = new List<DataItem>();
+    class DataItem
+    {
+        public DateTime Date { get; set; }
+        public decimal Quote { get; set; }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        firstchartvisible = true;
+        secondchartvisible = false;
+        await GetCoinInfo(coin, 30);
+    }
+
+    private async Task GetCoinInfo(string mycoin, int days)
+    {
+        CoinpaprikaAPI.Client client = new CoinpaprikaAPI.Client();
+
+        if (mycoin == string.Empty || mycoin == null || mycoin == "") mycoin = "btc-bitcoin";
+        mycoin = mycoin.ToLower();
+
+        try
+        {
+            var coins = await client.GetLatestOhlcForCoinAsync(mycoin, "USD");
+            coinDetailsList = JsonConvert.DeserializeObject<List<CoinpaprikaAPI.Entity.OhlcValue>>(coins.Raw);
+            var historical = await client.GetHistoricalOhlcForCoinAsync(mycoin, DateTime.Now.AddDays(-days), DateTime.Now, 250, "USD");
+            historicalList = JsonConvert.DeserializeObject<List<CoinpaprikaAPI.Entity.OhlcValue>>(historical.Raw);
+
+
+            HistoricalPriceArray = new List<DataItem>();
+            HistoricalCapitalizationArray = new List<DataItem>();
+            foreach (var item in historicalList)
+            {
+                HistoricalPriceArray.Add(new DataItem() { Date = item.TimeClose.Date, Quote = item.Close });
+                HistoricalCapitalizationArray.Add(new DataItem() { Date = item.TimeClose.Date, Quote = item.MarketCap });
+            }
+        }
+        catch (Exception ex)
+        {
+            NavigationManager.NavigateTo("coininfo");
+        }
+
+
+    }
+
+    private async Task ShowCoinHistory(string coin, object days)
+    {
+        if (days == null) days = "30";
+
+        int mydays = Int32.Parse((string)days);
+        await GetCoinInfo(coin, mydays);
+    }
+
+    private void ChangeRadio(int? value)
+    {
+        if (value == 1)
+        {
+            firstchartvisible = true;
+            secondchartvisible = false;
+        }
+
+        if (value == 2)
+        {
+            firstchartvisible = false;
+            secondchartvisible = true;
+        }
+    }
+}
+
+

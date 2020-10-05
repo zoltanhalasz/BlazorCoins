@@ -1,0 +1,47 @@
+﻿@page "/mktsummary"
+@using System.Globalization
+@using CoinpaprikaAPI
+@using Json.Net
+@using Newtonsoft.Json
+@using CoinpaprikaAPI.Entity
+@using BlazorCoins.Data
+@inject NavigationManager NavigationManager
+@inject CoinService CoinService
+
+<h1>Market Summary</h1>
+
+@if (coinList == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <RadzenGrid AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterMode="FilterMode.Advanced" AllowPaging="true" PageSize="10"
+                AllowSorting="true" Data="@coinList" TItem="CoinpaprikaAPI.Entity.CoinInfo" ColumnWidth="100px">
+        <Columns>
+            <RadzenGridColumn TItem="CoinpaprikaAPI.Entity.CoinInfo" Property="Name" Title="Name" />
+            <RadzenGridColumn TItem="CoinpaprikaAPI.Entity.CoinInfo" Property="Symbol" Title="Symbol" />
+            <RadzenGridColumn TItem="CoinpaprikaAPI.Entity.CoinInfo" Property="Rank" Title="Rank" />
+            <RadzenGridColumn TItem="CoinpaprikaAPI.Entity.CoinInfo" Property="Type" Title="Type" />
+            
+        </Columns>
+    </RadzenGrid>
+
+}
+
+
+@code {
+    private List<CoinpaprikaAPI.Entity.CoinInfo> coinList = new List<CoinpaprikaAPI.Entity.CoinInfo>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        coinList = await CoinService.GetCoinListAsync();
+
+    }
+
+
+}
+
+
+

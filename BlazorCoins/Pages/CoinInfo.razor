@@ -1,0 +1,94 @@
+﻿@page "/coininfo"
+@using System.Globalization
+@using CoinpaprikaAPI
+@using Json.Net
+@using Newtonsoft.Json
+@using CoinpaprikaAPI.Entity
+@using BlazorCoins.Data
+@inject NavigationManager NavigationManager
+@inject CoinService CoinService
+@using OfficeOpenXml;
+@inject IJSRuntime iJSRuntime;
+
+
+<h1>Top 100 Popular Coin List</h1>
+
+@if (coinList == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <br />
+    <button class="btn btn-primary" @onclick="GenerateExcel">Download</button>
+    <hr />
+    <br />
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Symbol</th>
+                <th>Rank</th>
+                <th>Info</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var coin in coinList)
+            {
+                <tr>
+                    <td>@coin.Name</td>
+                    <td>@coin.Symbol</td>
+                    <td>@coin.Rank</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="@( () => NavigateToDetail(coin.Name, coin.Symbol))">
+                            Detail
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private List<CoinpaprikaAPI.Entity.CoinInfo> coinList = new List<CoinpaprikaAPI.Entity.CoinInfo>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        coinList = await CoinService.GetCoinListAsync();
+        //var coinsOhlc = await client.GetLatestOhlcForCoinAsync("btc-bitcoin", "USD");
+    }
+
+    private void NavigateToDetail(string name, string symbol)
+    {
+        NavigationManager.NavigateTo("bitcoin/" + symbol + "-" + name);
+    }
+
+    private async Task DownloadExcel(IJSRuntime myJSRuntime)
+    {
+        byte[] file;
+
+        if (coinList == null) return;
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        using (var package = new ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("Sheet1");
+            worksheet.Cells.LoadFromCollection(coinList, true);
+            package.Save();
+            file = package.GetAsByteArray();
+        }
+        await myJSRuntime.InvokeAsync<List<CoinInfo>>("saveAsExcel", "CoinList.xlsx", Convert.ToBase64String(file));
+    }
+
+    private async Task GenerateExcel()
+    {
+        await DownloadExcel(iJSRuntime);
+    }
+}
+
+
+
