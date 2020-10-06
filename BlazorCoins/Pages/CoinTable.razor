@@ -1,4 +1,4 @@
-﻿@page "/coininfo"
+﻿@page "/cointable"
 @using System.Globalization
 @using CoinpaprikaAPI
 @using Json.Net
@@ -11,7 +11,7 @@
 @inject IJSRuntime iJSRuntime;
 
 
-<h1>Top 100 Popular Coin List</h1>
+<h1>Top 100 Popular Coin List (with HTML Table)</h1>
 
 @if (coinList == null)
 {
@@ -64,7 +64,7 @@ else
 
     private void NavigateToDetail(string name, string symbol)
     {
-        NavigationManager.NavigateTo("bitcoin/" + symbol + "-" + name);
+        NavigationManager.NavigateTo("coinhistory/" + symbol + "-" + name);
     }
 
     private async Task DownloadExcel(IJSRuntime myJSRuntime)

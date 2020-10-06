@@ -1,4 +1,4 @@
-﻿@page "/mktsummary"
+﻿@page "/coingrid"
 @using System.Globalization
 @using CoinpaprikaAPI
 @using Json.Net
@@ -8,7 +8,7 @@
 @inject NavigationManager NavigationManager
 @inject CoinService CoinService
 
-<h1>Market Summary</h1>
+<h1>Top 100 Popular Coin List (with Radzen Grid)</h1>
 
 @if (coinList == null)
 {
@@ -16,7 +16,7 @@
 }
 else
 {
-    <RadzenGrid AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterMode="FilterMode.Advanced" AllowPaging="true" PageSize="10"
+    <RadzenGrid  AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterMode="FilterMode.Advanced" AllowPaging="true" PageSize="10"
                 AllowSorting="true" Data="@coinList" TItem="CoinpaprikaAPI.Entity.CoinInfo" ColumnWidth="100px">
         <Columns>
             <RadzenGridColumn TItem="CoinpaprikaAPI.Entity.CoinInfo" Property="Name" Title="Name" />
@@ -34,12 +34,14 @@ else
     private List<CoinpaprikaAPI.Entity.CoinInfo> coinList = new List<CoinpaprikaAPI.Entity.CoinInfo>();
 
 
+
     protected override async Task OnInitializedAsync()
     {
         coinList = await CoinService.GetCoinListAsync();
 
     }
 
+  
 
 }
 

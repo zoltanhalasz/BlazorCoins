@@ -1,13 +1,16 @@
-﻿@page "/bitcoin/{coin}"
-@page "/bitcoin"
+﻿@page "/coinhistory/{coin}"
+@page "/coinhistory"
 @using CoinpaprikaAPI
 @using Json.Net
 @using Newtonsoft.Json
 @using CoinpaprikaAPI.Entity
 @inject NavigationManager NavigationManager
+@using OfficeOpenXml;
+@inject IJSRuntime iJSRuntime;
+
 
 <h1>@coin</h1>
-<div class="row">    
+<div class="row">
     <div class="col-md-4">
         <h4>Select Days</h4>
         <RadzenDropDown AllowClear="true" TValue="string"
@@ -64,6 +67,7 @@
 
 @if (historicalList != null)
 {
+
     if (firstchartvisible)
     {
         <div class="row">
@@ -99,6 +103,32 @@
         </div>
     }
 
+}
+
+@if (historicalList == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <button class="btn btn-primary" @onclick="GenerateExcel">Download</button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Price</th>              
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in historicalList)
+            {
+                <tr>
+                    <td>@item.TimeClose</td>
+                    <td>@item.Close</td>                    
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
@@ -182,6 +212,29 @@
             secondchartvisible = true;
         }
     }
+
+    private async Task DownloadExcel(IJSRuntime myJSRuntime)
+    {
+        byte[] file;
+
+        if (historicalList == null) return;
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        using (var package = new ExcelPackage())
+        {
+            var worksheet = package.Workbook.Worksheets.Add("Sheet1");
+            worksheet.Cells.LoadFromCollection(historicalList, true);
+            package.Save();
+            file = package.GetAsByteArray();
+        }
+        await myJSRuntime.InvokeAsync<List<CoinInfo>>("saveAsExcel", "HistoricalList.xlsx", Convert.ToBase64String(file));
+    }
+
+    private async Task GenerateExcel()
+    {
+        await DownloadExcel(iJSRuntime);
+    }
+
 }
 
 
